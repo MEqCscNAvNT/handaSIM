@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>はんだ付けマスター - Mobile Optimized</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header-section">
+        <h2 class="header-title">はんだ付けマスター</h2>
+        <div class="subtitle">v34.1 Mobile Optimized Layout</div>
+    </div>
+
+    <div class="game-area">
+        <div class="screen-wrapper">
+            <canvas id="simCanvas" width="800" height="450"></canvas>
+        </div>
+
+        <div class="pc-instr-overlay">
+            <div class="ui-card instruction-box">
+                <p>🛠️ 正しい手順</p>
+                <ol>
+                    <li>右(こて)を当て加熱</li>
+                    <li>左(はん)で適量供給</li>
+                    <li>先に左を離す</li>
+                    <li>最後に右を離す</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="result-card-wrapper">
+            <div class="ui-card result-card">
+                <div id="status" class="status-badge">準備完了</div>
+                <div id="scoreContent" class="score-content">
+                    <div class="waiting-msg">スコア待機中...</div>
+                </div>
+                <button class="btn-reset" id="resetBtn">↻ リトライ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-buttons" id="actionGroup">
+        <button class="btn-action" id="btnTouchSolder">はんだ</button>
+        <button class="btn-action" id="btnTouchIron">こて</button>
+    </div>
+
+    <div class="mobile-instructions">
+        <span>①加熱</span>→<span>②供給</span>→<span>③はんだ離す</span>→<span>④こて離す</span>
+    </div>
+</div>
+
+<script src="main.js"></script>
+</body>
+</html>
