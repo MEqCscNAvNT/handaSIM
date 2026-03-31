@@ -4,10 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById('status');
     const scoreContent = document.getElementById('scoreContent');
     const resetBtn = document.getElementById('resetBtn');
-
     const btnIron = document.getElementById('btnTouchIron');
     const btnSolder = document.getElementById('btnTouchSolder');
+    const actionGroup = document.getElementById('actionGroup');
 
+    // 定数・座標
     const GROUND_Y = 360; 
     const LEAD_X = 400;   
     const LEAD_WIDTH = 32; 
@@ -15,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const PAD_EXPOSED_LENGTH = 80; 
     const PAD_HALF_WIDTH = 16 + PAD_EXPOSED_LENGTH; 
     
+    // 物理パラメータ
     const MELTING_POINT = 217; 
     const IDEAL_TEMP_MIN = 230; 
     const WETTING_TEMP = 230; 
@@ -27,8 +29,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const TGT_IRON_Y = GROUND_Y - 6;
     const TGT_WIRE_X = LEAD_X - LEAD_WIDTH/2;
     const TGT_WIRE_Y = GROUND_Y;
-    const actionGroup = document.getElementById('actionGroup');
 
+    // 状態管理
     let state = {
         temp: AMBIENT_TEMP,
         ironDown: false, solderDown: false, finished: false,
@@ -70,9 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
         particles = [];
         updateStatus("準備完了", "#e1f5fe", "#5d4037");
         scoreContent.innerHTML = '<div style="text-align:center; color:#90a4ae; font-weight:900; padding: 20px 0;">スコア待機中...</div>';
-        
         resetBtn.style.display = 'none';
-        actionGroup.style.display = 'flex'; // 【追加】操作ボタンを表示
+        actionGroup.style.display = 'flex';
         lastTime = 0;
     }
 
@@ -86,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if(e) e.preventDefault(); 
         if(!state.finished) { state.ironDown = true; updateStatus("ｱﾌﾟﾛｰﾁ", "#ffe0b2", "#5d4037"); } 
     };
-    
     const stopIron = (e) => { 
         if(e) e.preventDefault(); 
         if(state.ironDown && !state.finished) {
@@ -98,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         state.ironDown = false; 
     };
-
     const startSolder = (e) => { 
         if(e) e.preventDefault(); 
         if(!state.finished && state.ironDown && !state.isOutOfSolder) { 
@@ -106,7 +105,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.temp < WETTING_TEMP) state.earlyFeed = true;
         } 
     };
-    
     const stopSolder = (e) => { 
         if(e) e.preventDefault(); 
         if(state.solderDown) state.lastFeed = Date.now(); 
@@ -116,13 +114,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.addEventListener('keydown', (e) => { if(e.code === 'Space' && !state.finished) startSolder(e); });
     window.addEventListener('keyup', (e) => { if(e.code === 'Space') stopSolder(e); });
-    
     btnIron.addEventListener('mousedown', startIron); window.addEventListener('mouseup', stopIron);
     btnSolder.addEventListener('mousedown', startSolder); btnSolder.addEventListener('mouseup', stopSolder);
-    
     btnIron.addEventListener('touchstart', startIron, {passive: false}); btnIron.addEventListener('touchend', stopIron, {passive: false});
     btnSolder.addEventListener('touchstart', startSolder, {passive: false}); btnSolder.addEventListener('touchend', stopSolder, {passive: false});
-    
     canvas.addEventListener('mousedown', (e) => { if(e.button === 0) startSolder(e); if(e.button === 2) startIron(e); });
     canvas.addEventListener('mouseup', (e) => { if(e.button === 0) stopSolder(e); if(e.button === 2) stopIron(e); });
     canvas.addEventListener('contextmenu', e => e.preventDefault()); 
@@ -132,23 +127,19 @@ document.addEventListener('DOMContentLoaded', () => {
         state.finished = true; state.solderDown = false;
         if(state.isStuck) updateStatus("⚠ 固着", "#ffcdd2", "#c62828");
         else updateStatus("終了", "#f5f5f5", "#5d4037");
-        
         calcScore();
-        
         resetBtn.style.display = 'block';
-        actionGroup.style.display = 'none'; // 【追加】操作ボタンを隠す
+        actionGroup.style.display = 'none';
     }
 
     function calcScore() {
         let tScore = 0, sScore = 0, pScore = 30; 
         let tMsg = "", sMsg = "", pMsg = "正しい手順";
-
         if (state.temp < MELTING_POINT) { tScore = 0; tMsg = "加熱不足"; }
         else if (state.temp < IDEAL_TEMP_MIN) { tScore = 15; tMsg = "温度低め"; }
         else if (state.temp <= IDEAL_TEMP_MAX) { tScore = 30; tMsg = "適温！"; }
         else if (state.temp <= OVERHEAT_LIMIT) { tScore = 15; tMsg = "ｱﾂｽｷﾞ!"; }
         else { tScore = 5; tMsg = "オーバーヒート"; }
-
         if (state.isStuck) { pScore = 0; pMsg = "先こて離し(固着)"; sScore = 0; } 
         else if (state.earlyFeed) { pScore = 10; pMsg = "早すぎ供給"; }
         else if (state.isOutOfSolder) { pScore = 15; pMsg = "はんだ過多"; }
@@ -167,7 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let total = tScore + sScore + pScore;
         let color = total >= 80 ? "#4caf50" : (total >= 50 ? "#ff9800" : "#f44336"); 
-
         scoreContent.innerHTML = `
             <div class="score-row"><span>🌡️ 温度</span> <span style="color:${tScore===30?'#4caf50':'#f44336'}">${tScore===30?'✅':'❌'} ${tMsg}</span></div>
             <div class="score-row"><span>🛠️ 手順</span> <span style="color:${pScore>=25?'#4caf50':'#f44336'}">${pScore>=25?'✅':'❌'} ${pMsg}</span></div>
@@ -262,14 +252,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Math.random() < 0.2) particles.push(new Particle(TGT_WIRE_X, TGT_WIRE_Y));
         }
         particles.forEach((p, i) => { p.update(); if(p.opacity <= 0) particles.splice(i, 1); });
-        draw();
-        requestAnimationFrame(update);
-    }
 
-    function draw() {
-        ctx.fillStyle = "#fff6e5"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // --- 描画処理 ---
+        ctx.fillStyle = "#fff6e5"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // ① メータ描画（常に拡大なしの位置）
         drawVUMeter();
 
+        ctx.save();
+        // ② スマホ縦持ち時のみ拡大Viewport設定
+        const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+        if (isMobilePortrait) {
+            const mobileScale = 1.8;
+            const targetX = canvas.width / 2; // 400
+            const targetY = canvas.height - 40; // 接点の表示位置を画面下に
+            const translateX = targetX - (LEAD_X * mobileScale); 
+            const translateY = targetY - (GROUND_Y * mobileScale); 
+            ctx.translate(translateX, translateY);
+            ctx.scale(mobileScale, mobileScale);
+        }
+
+        // ③ 物体描画
         ctx.beginPath(); ctx.rect(LEAD_X - LEAD_WIDTH/2, GROUND_Y - LEAD_HEIGHT, LEAD_WIDTH, 150); drawWithOutline("#cfd8dc");
         ctx.beginPath(); ctx.rect(-10, GROUND_Y, canvas.width + 20, canvas.height); drawWithOutline("#81c784");
         ctx.beginPath(); ctx.rect(LEAD_X - PAD_HALF_WIDTH, GROUND_Y, PAD_HALF_WIDTH * 2, 15); drawWithOutline("#f0a07c"); 
@@ -288,34 +292,28 @@ document.addEventListener('DOMContentLoaded', () => {
             if(state.flow < PAD_EXPOSED_LENGTH * 0.5 || state.isBall) {
                 solderPath.ellipse(LEAD_X, GROUND_Y, baseW + LEAD_WIDTH/2, currentH, 0, Math.PI, Math.PI * 2);
             } else {
-                // 【復旧】v31の綺麗な遷移ロジック
                 let topLx = LEAD_X - LEAD_WIDTH/2;
                 let topRx = LEAD_X + LEAD_WIDTH/2;
                 let cxL, cyL, cxR, cyR;
-
-                if (state.amount <= 45) { // 内向き弧
-                    cxL = topLx; cyL = GROUND_Y;
-                    cxR = topRx; cyR = GROUND_Y;
-                } else if (state.amount <= 55) { // 直線への遷移
+                if (state.amount <= 45) { cxL = topLx; cyL = GROUND_Y; cxR = topRx; cyR = GROUND_Y; }
+                else if (state.amount <= 55) {
                     let t = (state.amount - 45) / 10; 
                     cxL = topLx + (((startLx + topLx) / 2) - topLx) * t;
                     cyL = GROUND_Y + (((GROUND_Y + topY) / 2) - GROUND_Y) * t;
                     cxR = topRx + (((startRx + topRx) / 2) - topRx) * t;
-                    cyR = GROUND_Y + (((GROUND_Y + topY) / 2) - GROUND_Y) * t;
-                } else { // 外向き（ボール化）
+                    cyR = cyL;
+                } else {
                     let over = state.amount - 55;
                     cxL = ((startLx + topLx) / 2) - over * 1.5; 
                     cyL = ((GROUND_Y + topY) / 2) - over * 0.8; 
                     cxR = ((startRx + topRx) / 2) + over * 1.5;
                     cyR = cyL;
                 }
-
                 solderPath.moveTo(startLx, GROUND_Y); 
                 solderPath.quadraticCurveTo(cxL, cyL, topLx, topY); 
                 solderPath.lineTo(topRx, topY);
                 solderPath.quadraticCurveTo(cxR, cyR, startRx, GROUND_Y); 
             }
-            
             ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.lineJoin = "round"; ctx.lineCap = "round"; 
             ctx.stroke(solderPath);
             ctx.fillStyle = isMelted ? "#ffffff" : "#b0bec5"; 
@@ -324,12 +322,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (state.isOverheated) {
                 ctx.save(); ctx.clip(solderPath); ctx.fillStyle = "rgba(62, 39, 35, 0.7)"; 
                 const scorchDots = [[-10, 5, 3], [12, 8, 2.5], [-5, 18, 4], [22, 6, 2], [-20, 12, 2.5], [8, 25, 3], [-15, 28, 2], [18, 20, 3], [0, 12, 2]];
-                scorchDots.forEach(d => {
-                    if (d[1] < currentH + 10) { ctx.beginPath(); ctx.arc(LEAD_X + d[0], GROUND_Y - d[1], d[2], 0, Math.PI*2); ctx.fill(); }
-                });
+                scorchDots.forEach(d => { if (d[1] < currentH + 10) { ctx.beginPath(); ctx.arc(LEAD_X + d[0], GROUND_Y - d[1], d[2], 0, Math.PI*2); ctx.fill(); } });
                 ctx.restore();
             }
-
             if (isMelted && !state.isOverheated) {
                 ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; ctx.beginPath();
                 let bulgeAmt = state.isBall ? 5 : (Math.max(0, state.amount - LEAD_HEIGHT) * 0.2);
@@ -344,14 +339,16 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.moveTo(drawX - 150, drawY - 150); ctx.lineTo(drawX, drawY); ctx.stroke();
             ctx.strokeStyle = "#cfd8dc"; ctx.lineWidth = 6; ctx.stroke();
         }
-
         if (state.ironX < TGT_IRON_X + 100) {
             ctx.save(); ctx.translate(state.ironX, state.ironY); ctx.rotate(-Math.PI / 4);
             ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(150, -12); ctx.lineTo(150, 8); ctx.lineTo(8, 8); ctx.closePath(); drawWithOutline("#ffb74d"); 
             ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(18, -2); ctx.closePath(); drawWithOutline("#cfd8dc"); 
             ctx.restore();
         }
+        ctx.restore();
+        requestAnimationFrame(update); 
     }
+
     resetSim();
     requestAnimationFrame(update); 
 });
