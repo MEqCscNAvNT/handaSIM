@@ -30,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const TGT_WIRE_X = LEAD_X - LEAD_WIDTH/2;
     const TGT_WIRE_Y = GROUND_Y;
 
-    // 状態管理
     let state = {
         temp: AMBIENT_TEMP,
         ironDown: false, solderDown: false, finished: false,
@@ -71,7 +70,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         particles = [];
         updateStatus("準備完了", "#e1f5fe", "#5d4037");
-        scoreContent.innerHTML = '<div style="text-align:center; color:#90a4ae; font-weight:900; padding: 20px 0;">スコア待機中...</div>';
+        scoreContent.innerHTML = '<div style="text-align:center; color:#90a4ae; font-weight:900; padding: 25px 0;">スコア待機中...</div>';
         resetBtn.style.display = 'none';
         actionGroup.style.display = 'flex';
         lastTime = 0;
@@ -83,34 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
         statusEl.style.color = color;
     }
 
-    const startIron = (e) => { 
-        if(e) e.preventDefault(); 
-        if(!state.finished) { state.ironDown = true; updateStatus("ｱﾌﾟﾛｰﾁ", "#ffe0b2", "#5d4037"); } 
-    };
-    const stopIron = (e) => { 
-        if(e) e.preventDefault(); 
-        if(state.ironDown && !state.finished) {
-            if (state.ironX > TGT_IRON_X + 5 && state.temp < 30 && state.amount === 0) {
-                state.ironDown = false; updateStatus("準備完了", "#e1f5fe", "#5d4037"); return;
-            }
-            if (state.solderDown && state.amount > 0) state.isStuck = true; 
-            finishSim(); 
-        }
-        state.ironDown = false; 
-    };
-    const startSolder = (e) => { 
-        if(e) e.preventDefault(); 
-        if(!state.finished && state.ironDown && !state.isOutOfSolder) { 
-            state.solderDown = true; 
-            if (state.temp < WETTING_TEMP) state.earlyFeed = true;
-        } 
-    };
-    const stopSolder = (e) => { 
-        if(e) e.preventDefault(); 
-        if(state.solderDown) state.lastFeed = Date.now(); 
-        state.solderDown = false; 
-        if (state.ironDown && !state.finished && state.ironX <= TGT_IRON_X + 5) updateStatus("なじませ中", "#c8e6c9", "#5d4037");
-    };
+    const startIron = (e) => { if(e) e.preventDefault(); if(!state.finished) { state.ironDown = true; updateStatus("ｱﾌﾟﾛｰﾁ", "#ffe0b2", "#5d4037"); } };
+    const stopIron = (e) => { if(e) e.preventDefault(); if(state.ironDown && !state.finished) { if (state.ironX > TGT_IRON_X + 5 && state.temp < 30 && state.amount === 0) { state.ironDown = false; updateStatus("準備完了", "#e1f5fe", "#5d4037"); return; } if (state.solderDown && state.amount > 0) state.isStuck = true; finishSim(); } state.ironDown = false; };
+    const startSolder = (e) => { if(e) e.preventDefault(); if(!state.finished && state.ironDown && !state.isOutOfSolder) { state.solderDown = true; if (state.temp < WETTING_TEMP) state.earlyFeed = true; } };
+    const stopSolder = (e) => { if(e) e.preventDefault(); if(state.solderDown) state.lastFeed = Date.now(); state.solderDown = false; if (state.ironDown && !state.finished && state.ironX <= TGT_IRON_X + 5) updateStatus("なじませ中", "#c8e6c9", "#5d4037"); };
 
     window.addEventListener('keydown', (e) => { if(e.code === 'Space' && !state.finished) startSolder(e); });
     window.addEventListener('keyup', (e) => { if(e.code === 'Space') stopSolder(e); });
@@ -158,12 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let total = tScore + sScore + pScore;
         let color = total >= 80 ? "#4caf50" : (total >= 50 ? "#ff9800" : "#f44336"); 
-        scoreContent.innerHTML = `
-            <div class="score-row"><span>🌡️ 温度</span> <span style="color:${tScore===30?'#4caf50':'#f44336'}">${tScore===30?'✅':'❌'} ${tMsg}</span></div>
-            <div class="score-row"><span>🛠️ 手順</span> <span style="color:${pScore>=25?'#4caf50':'#f44336'}">${pScore>=25?'✅':'❌'} ${pMsg}</span></div>
-            <div class="score-row"><span>📐 形状</span> <span style="color:${sScore>=30?'#4caf50':'#f44336'}">${sScore>=30?'✅':'❌'} ${sMsg}</span></div>
-            <div class="score-total" style="color:${color};">TOTAL: ${total}</div>
-        `;
+        scoreContent.innerHTML = `<div class="score-row"><span>🌡️ 温度</span> <span style="color:${tScore===30?'#4caf50':'#f44336'}">${tScore===30?'✅':'❌'} ${tMsg}</span></div><div class="score-row"><span>🛠️ 手順</span> <span style="color:${pScore>=25?'#4caf50':'#f44336'}">${pScore>=25?'✅':'❌'} ${pMsg}</span></div><div class="score-row"><span>📐 形状</span> <span style="color:${sScore>=30?'#4caf50':'#f44336'}">${sScore>=30?'✅':'❌'} ${sMsg}</span></div><div class="score-total" style="color:${color};">TOTAL: ${total}</div>`;
     }
 
     function drawVUMeter() {
@@ -171,24 +141,18 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.save();
         ctx.beginPath(); ctx.rect(cx - r - 30, 0, (r + 30) * 2, cy); ctx.clip();
         ctx.beginPath(); ctx.arc(cx, cy, r + 20, Math.PI, Math.PI * 2); 
-        ctx.fillStyle = "#ffffff"; ctx.fill();
-        ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.stroke();
+        ctx.fillStyle = "#ffffff"; ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.stroke();
         const t2a = (t) => Math.PI + (Math.min(Math.max(t, 0), 350) / 350) * Math.PI;
         ctx.lineWidth = 16; ctx.lineCap = "butt"; 
         ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, Math.PI * 2); ctx.strokeStyle = "#eeeeee"; ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, r, t2a(IDEAL_TEMP_MIN), t2a(IDEAL_TEMP_MAX)); ctx.strokeStyle = "#66bb6a"; ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, r, t2a(OVERHEAT_LIMIT), t2a(350)); ctx.strokeStyle = "#ef5350"; ctx.stroke();
         ctx.lineWidth = 3; ctx.strokeStyle = "#5d4037"; ctx.lineCap = "round";
-        for(let i=0; i<=7; i++) {
-            let a = t2a(i * 50); 
-            ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*(r-12), cy + Math.sin(a)*(r-20)); ctx.stroke();
-        }
+        for(let i=0; i<=7; i++) { let a = t2a(i * 50); ctx.beginPath(); ctx.moveTo(cx + Math.cos(a)*(r-12), cy + Math.sin(a)*(r-20)); ctx.stroke(); }
         let needleA = t2a(state.temp);
-        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(needleA)*(r-2), cy + Math.sin(needleA)*(r-2));
-        ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + Math.cos(needleA)*(r-2), cy + Math.sin(needleA)*(r-2)); ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.stroke();
         ctx.restore();
-        ctx.beginPath(); ctx.moveTo(cx - r - 23, cy); ctx.lineTo(cx + r + 23, cy);
-        ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.lineCap = "round"; ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - r - 23, cy); ctx.lineTo(cx + r + 23, cy); ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.lineCap = "round"; ctx.stroke();
         ctx.beginPath(); ctx.arc(cx, cy, 10, 0, Math.PI*2); ctx.fillStyle = "#5d4037"; ctx.fill();
         ctx.font = "900 24px 'Quicksand', sans-serif"; ctx.textAlign = "center"; 
         ctx.fillText(Math.floor(state.temp) + "℃", cx, cy + 32);
@@ -206,17 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
         lastTime = currentTime;
 
         if (state.temp >= OVERHEAT_LIMIT) state.isOverheated = true;
-
         if (state.ironDown && !state.finished && state.ironX <= TGT_IRON_X + 5) {
-            if (statusEl.innerText !== "なじませ中" && !state.isOutOfSolder) {
-                updateStatus(state.solderDown ? "供給中" : "加熱中", state.solderDown ? "#b2ebf2" : "#ffe0b2", "#5d4037");
-            }
+            if (statusEl.innerText !== "なじませ中" && !state.isOutOfSolder) { updateStatus(state.solderDown ? "供給中" : "加熱中", state.solderDown ? "#b2ebf2" : "#ffe0b2", "#5d4037"); }
             let heatRate = state.temp < 200 ? 1.8 : 0.8;
             if (state.solderDown && state.temp > MELTING_POINT - 10 && !state.isOutOfSolder) heatRate = 0.3; 
             state.temp += (MAX_IRON_TEMP - state.temp) * heatRate * dt; 
-        } else {
-            state.temp = Math.max(AMBIENT_TEMP, state.temp - 50 * dt); 
-        }
+        } else { state.temp = Math.max(AMBIENT_TEMP, state.temp - 50 * dt); }
 
         let ease = 0.2;
         state.ironX += ((state.ironDown && !state.finished ? TGT_IRON_X : TGT_IRON_X + 150) - state.ironX) * ease;
@@ -228,19 +187,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (state.ironDown && state.solderDown && !state.finished) {
             if (state.temp >= MELTING_POINT && !state.isOutOfSolder) {
                 state.feedTime += dt;
-                if (state.feedTime >= 2.0) {
-                    state.isOutOfSolder = true;
-                    updateStatus("はんだ過多", "#cfd8dc", "#455a64"); 
-                } else {
-                    state.amount += 45.0 * dt; 
-                    let idealFact = Math.min(1.5, Math.max(1.0, (state.temp - MELTING_POINT) / (WETTING_TEMP - MELTING_POINT)));
-                    if (state.earlyFeed && state.amount > 10 && state.flow < 5) state.isBall = true;
-                    if (state.isBall) { 
-                        state.flow = 2; updateStatus("弾かれています", "#ffcdd2", "#c62828"); 
-                    } else { 
-                        state.flow = Math.min(PAD_EXPOSED_LENGTH, state.flow + (40.0 * idealFact * dt)); 
-                    }
-                }
+                if (state.feedTime >= 2.0) { state.isOutOfSolder = true; updateStatus("はんだ過多", "#cfd8dc", "#455a64"); } 
+                else { state.amount += 45.0 * dt; let idealFact = Math.min(1.5, Math.max(1.0, (state.temp - MELTING_POINT) / (WETTING_TEMP - MELTING_POINT))); if (state.earlyFeed && state.amount > 10 && state.flow < 5) state.isBall = true; if (state.isBall) { state.flow = 2; updateStatus("弾かれています", "#ffcdd2", "#c62828"); } else { state.flow = Math.min(PAD_EXPOSED_LENGTH, state.flow + (40.0 * idealFact * dt)); } }
             }
         } else if (state.ironDown && !state.solderDown && !state.finished && state.amount > 0 && state.temp > MELTING_POINT) {
             let idealFact = Math.min(1.5, Math.max(1.0, (state.temp - MELTING_POINT) / (WETTING_TEMP - MELTING_POINT)));
@@ -248,103 +196,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let timeSinceFeed = Date.now() - state.lastFeed;
-        if (state.temp > 90 && (state.solderDown || (!state.solderDown && timeSinceFeed < 1000 && state.amount > 0)) && !state.isBall && !state.finished && !state.isOutOfSolder) {
-            if (Math.random() < 0.2) particles.push(new Particle(TGT_WIRE_X, TGT_WIRE_Y));
-        }
+        if (state.temp > 90 && (state.solderDown || (!state.solderDown && timeSinceFeed < 1000 && state.amount > 0)) && !state.isBall && !state.finished && !state.isOutOfSolder) { if (Math.random() < 0.2) particles.push(new Particle(TGT_WIRE_X, TGT_WIRE_Y)); }
         particles.forEach((p, i) => { p.update(); if(p.opacity <= 0) particles.splice(i, 1); });
 
         // --- 描画処理 ---
-        ctx.fillStyle = "#fff6e5"; 
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff6e5"; ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // ① メータ描画（常に拡大なしの位置）
-        drawVUMeter();
-
-        ctx.save();
-        // ② スマホ縦持ち時のみ拡大Viewport設定
         const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
+
+        // ① メータ描画（スマホ時は1.4倍に拡大）
+        ctx.save();
+        if (isMobilePortrait) {
+            const meterScale = 1.4;
+            const mCX = canvas.width / 2;
+            const mCY = 130;
+            ctx.translate(mCX, mCY);
+            ctx.scale(meterScale, meterScale);
+            ctx.translate(-mCX, -mCY);
+        }
+        drawVUMeter();
+        ctx.restore();
+
+        // ② 作業エリア描画（スマホ時は1.8倍に拡大）
+        ctx.save();
         if (isMobilePortrait) {
             const mobileScale = 1.8;
-            const targetX = canvas.width / 2; // 400
-            const targetY = canvas.height - 40; // 接点の表示位置を画面下に
+            const targetX = canvas.width / 2;
+            const targetY = canvas.height - 45;
             const translateX = targetX - (LEAD_X * mobileScale); 
             const translateY = targetY - (GROUND_Y * mobileScale); 
             ctx.translate(translateX, translateY);
             ctx.scale(mobileScale, mobileScale);
         }
 
-        // ③ 物体描画
         ctx.beginPath(); ctx.rect(LEAD_X - LEAD_WIDTH/2, GROUND_Y - LEAD_HEIGHT, LEAD_WIDTH, 150); drawWithOutline("#cfd8dc");
         ctx.beginPath(); ctx.rect(-10, GROUND_Y, canvas.width + 20, canvas.height); drawWithOutline("#81c784");
         ctx.beginPath(); ctx.rect(LEAD_X - PAD_HALF_WIDTH, GROUND_Y, PAD_HALF_WIDTH * 2, 15); drawWithOutline("#f0a07c"); 
-
         particles.forEach(p => p.draw());
 
         if (state.amount > 1) {
             let isMelted = (!state.finished && state.temp > MELTING_POINT - 10);
-            let baseW = state.flow; 
-            let startLx = LEAD_X - LEAD_WIDTH/2 - baseW;
-            let startRx = LEAD_X + LEAD_WIDTH/2 + baseW;
-            let currentH = Math.min(state.amount, LEAD_HEIGHT); 
-            let topY = GROUND_Y - currentH;
-
+            let baseW = state.flow; let startLx = LEAD_X - LEAD_WIDTH/2 - baseW; let startRx = LEAD_X + LEAD_WIDTH/2 + baseW;
+            let currentH = Math.min(state.amount, LEAD_HEIGHT); let topY = GROUND_Y - currentH;
             let solderPath = new Path2D();
-            if(state.flow < PAD_EXPOSED_LENGTH * 0.5 || state.isBall) {
-                solderPath.ellipse(LEAD_X, GROUND_Y, baseW + LEAD_WIDTH/2, currentH, 0, Math.PI, Math.PI * 2);
-            } else {
-                let topLx = LEAD_X - LEAD_WIDTH/2;
-                let topRx = LEAD_X + LEAD_WIDTH/2;
-                let cxL, cyL, cxR, cyR;
+            if(state.flow < PAD_EXPOSED_LENGTH * 0.5 || state.isBall) { solderPath.ellipse(LEAD_X, GROUND_Y, baseW + LEAD_WIDTH/2, currentH, 0, Math.PI, Math.PI * 2); } 
+            else {
+                let topLx = LEAD_X - LEAD_WIDTH/2; let topRx = LEAD_X + LEAD_WIDTH/2; let cxL, cyL, cxR, cyR;
                 if (state.amount <= 45) { cxL = topLx; cyL = GROUND_Y; cxR = topRx; cyR = GROUND_Y; }
-                else if (state.amount <= 55) {
-                    let t = (state.amount - 45) / 10; 
-                    cxL = topLx + (((startLx + topLx) / 2) - topLx) * t;
-                    cyL = GROUND_Y + (((GROUND_Y + topY) / 2) - GROUND_Y) * t;
-                    cxR = topRx + (((startRx + topRx) / 2) - topRx) * t;
-                    cyR = cyL;
-                } else {
-                    let over = state.amount - 55;
-                    cxL = ((startLx + topLx) / 2) - over * 1.5; 
-                    cyL = ((GROUND_Y + topY) / 2) - over * 0.8; 
-                    cxR = ((startRx + topRx) / 2) + over * 1.5;
-                    cyR = cyL;
-                }
-                solderPath.moveTo(startLx, GROUND_Y); 
-                solderPath.quadraticCurveTo(cxL, cyL, topLx, topY); 
-                solderPath.lineTo(topRx, topY);
-                solderPath.quadraticCurveTo(cxR, cyR, startRx, GROUND_Y); 
+                else if (state.amount <= 55) { let t = (state.amount - 45) / 10; cxL = topLx + (((startLx + topLx) / 2) - topLx) * t; cyL = GROUND_Y + (((GROUND_Y + topY) / 2) - GROUND_Y) * t; cxR = topRx + (((startRx + topRx) / 2) - topRx) * t; cyR = cyL; }
+                else { let over = state.amount - 55; cxL = ((startLx + topLx) / 2) - over * 1.5; cyL = ((GROUND_Y + topY) / 2) - over * 0.8; cxR = ((startRx + topRx) / 2) + over * 1.5; cyR = cyL; }
+                solderPath.moveTo(startLx, GROUND_Y); solderPath.quadraticCurveTo(cxL, cyL, topLx, topY); solderPath.lineTo(topRx, topY); solderPath.quadraticCurveTo(cxR, cyR, startRx, GROUND_Y); 
             }
-            ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.lineJoin = "round"; ctx.lineCap = "round"; 
-            ctx.stroke(solderPath);
-            ctx.fillStyle = isMelted ? "#ffffff" : "#b0bec5"; 
-            ctx.fill(solderPath);
-
-            if (state.isOverheated) {
-                ctx.save(); ctx.clip(solderPath); ctx.fillStyle = "rgba(62, 39, 35, 0.7)"; 
-                const scorchDots = [[-10, 5, 3], [12, 8, 2.5], [-5, 18, 4], [22, 6, 2], [-20, 12, 2.5], [8, 25, 3], [-15, 28, 2], [18, 20, 3], [0, 12, 2]];
-                scorchDots.forEach(d => { if (d[1] < currentH + 10) { ctx.beginPath(); ctx.arc(LEAD_X + d[0], GROUND_Y - d[1], d[2], 0, Math.PI*2); ctx.fill(); } });
-                ctx.restore();
-            }
-            if (isMelted && !state.isOverheated) {
-                ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; ctx.beginPath();
-                let bulgeAmt = state.isBall ? 5 : (Math.max(0, state.amount - LEAD_HEIGHT) * 0.2);
-                ctx.arc(LEAD_X - 12 - bulgeAmt, GROUND_Y - currentH*0.5, 4 + bulgeAmt, 0, Math.PI*2); ctx.fill();
-            }
+            ctx.lineWidth = 6; ctx.strokeStyle = "#5d4037"; ctx.lineJoin = "round"; ctx.lineCap = "round"; ctx.stroke(solderPath); ctx.fillStyle = isMelted ? "#ffffff" : "#b0bec5"; ctx.fill(solderPath);
+            if (state.isOverheated) { ctx.save(); ctx.clip(solderPath); ctx.fillStyle = "rgba(62, 39, 35, 0.7)"; const scorchDots = [[-10, 5, 3], [12, 8, 2.5], [-5, 18, 4], [22, 6, 2], [-20, 12, 2.5], [8, 25, 3], [-15, 28, 2], [18, 20, 3], [0, 12, 2]]; scorchDots.forEach(d => { if (d[1] < currentH + 10) { ctx.beginPath(); ctx.arc(LEAD_X + d[0], GROUND_Y - d[1], d[2], 0, Math.PI*2); ctx.fill(); } }); ctx.restore(); }
+            if (isMelted && !state.isOverheated) { ctx.fillStyle = "rgba(255, 255, 255, 0.8)"; ctx.beginPath(); let bulgeAmt = state.isBall ? 5 : (Math.max(0, state.amount - LEAD_HEIGHT) * 0.2); ctx.arc(LEAD_X - 12 - bulgeAmt, GROUND_Y - currentH*0.5, 4 + bulgeAmt, 0, Math.PI*2); ctx.fill(); }
         }
-
-        if (state.wireX > TGT_WIRE_X - 100 || state.isStuck) {
-            ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 12; ctx.lineCap = "round"; ctx.beginPath(); 
-            let drawX = state.isStuck ? TGT_WIRE_X : state.wireX;
-            let drawY = state.isStuck ? TGT_WIRE_Y : state.wireY;
-            ctx.moveTo(drawX - 150, drawY - 150); ctx.lineTo(drawX, drawY); ctx.stroke();
-            ctx.strokeStyle = "#cfd8dc"; ctx.lineWidth = 6; ctx.stroke();
-        }
-        if (state.ironX < TGT_IRON_X + 100) {
-            ctx.save(); ctx.translate(state.ironX, state.ironY); ctx.rotate(-Math.PI / 4);
-            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(150, -12); ctx.lineTo(150, 8); ctx.lineTo(8, 8); ctx.closePath(); drawWithOutline("#ffb74d"); 
-            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(18, -2); ctx.closePath(); drawWithOutline("#cfd8dc"); 
-            ctx.restore();
-        }
+        if (state.wireX > TGT_WIRE_X - 100 || state.isStuck) { ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 12; ctx.lineCap = "round"; ctx.beginPath(); let drawX = state.isStuck ? TGT_WIRE_X : state.wireX; let drawY = state.isStuck ? TGT_WIRE_Y : state.wireY; ctx.moveTo(drawX - 150, drawY - 150); ctx.lineTo(drawX, drawY); ctx.stroke(); ctx.strokeStyle = "#cfd8dc"; ctx.lineWidth = 6; ctx.stroke(); }
+        if (state.ironX < TGT_IRON_X + 100) { ctx.save(); ctx.translate(state.ironX, state.ironY); ctx.rotate(-Math.PI / 4); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(150, -12); ctx.lineTo(150, 8); ctx.lineTo(8, 8); ctx.closePath(); drawWithOutline("#ffb74d"); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(24, -12); ctx.lineTo(18, -2); ctx.closePath(); drawWithOutline("#cfd8dc"); ctx.restore(); }
         ctx.restore();
         requestAnimationFrame(update); 
     }
