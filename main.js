@@ -24,12 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const OVERHEAT_LIMIT = 325;
     const MAX_IRON_TEMP = 330; 
     const AMBIENT_TEMP = 25;
+    const SMOKE_DURATION = 600; 
 
     const TGT_IRON_X = LEAD_X + LEAD_WIDTH/2 + 8;
     const TGT_IRON_Y = GROUND_Y - 6;
     const TGT_WIRE_X = LEAD_X - LEAD_WIDTH/2;
     const TGT_WIRE_Y = GROUND_Y;
 
+    // 状態管理
     let state = {
         temp: AMBIENT_TEMP,
         ironDown: false, solderDown: false, finished: false,
@@ -37,7 +39,7 @@ document.addEventListener('DOMContentLoaded', () => {
         wireX: TGT_WIRE_X - 150, wireY: TGT_WIRE_Y - 150,
         amount: 0, flow: 0, 
         isBall: false, isStuck: false, earlyFeed: false, lastFeed: 0,
-        feedTime: 0, isOutOfSolder: false, isOverheated: false 
+        feedTime: 0, isOutOfSolder: false, isOverheated: false, hasVoid: false 
     };
 
     let particles = [];
@@ -52,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
         update() {
             this.y += this.speedY;
             this.size += 0.2;
-            this.opacity -= 0.02;
+            this.opacity -= 0.035; 
         }
         draw() {
             ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, this.opacity)})`;
@@ -66,11 +68,12 @@ document.addEventListener('DOMContentLoaded', () => {
         state = { 
             temp: AMBIENT_TEMP, ironDown: false, solderDown: false, finished: false, 
             ironX: TGT_IRON_X + 150, ironY: TGT_IRON_Y - 150, wireX: TGT_WIRE_X - 150, wireY: TGT_WIRE_Y - 150, 
-            amount: 0, flow: 0, isBall: false, isStuck: false, earlyFeed: false, lastFeed: 0, feedTime: 0, isOutOfSolder: false, isOverheated: false 
+            amount: 0, flow: 0, isBall: false, isStuck: false, earlyFeed: false, lastFeed: 0, 
+            feedTime: 0, isOutOfSolder: false, isOverheated: false, hasVoid: false 
         };
         particles = [];
         updateStatus("準備完了", "#e1f5fe", "#5d4037");
-        scoreContent.innerHTML = '<div style="text-align:center; color:#90a4ae; font-weight:900; padding: 25px 0;">スコア待機中...</div>';
+        scoreContent.innerHTML = '<div style="text-align:center; color:#90a4ae; font-weight:900; padding: 20px 0;">スコア待機中...</div>';
         resetBtn.style.display = 'none';
         actionGroup.style.display = 'flex';
         lastTime = 0;
@@ -83,7 +86,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const startIron = (e) => { if(e) e.preventDefault(); if(!state.finished) { state.ironDown = true; updateStatus("ｱﾌﾟﾛｰﾁ", "#ffe0b2", "#5d4037"); } };
-    const stopIron = (e) => { if(e) e.preventDefault(); if(state.ironDown && !state.finished) { if (state.ironX > TGT_IRON_X + 5 && state.temp < 30 && state.amount === 0) { state.ironDown = false; updateStatus("準備完了", "#e1f5fe", "#5d4037"); return; } if (state.solderDown && state.amount > 0) state.isStuck = true; finishSim(); } state.ironDown = false; };
+    
+    const stopIron = (e) => { 
+        if(e) e.preventDefault(); 
+        if(state.ironDown && !state.finished) {
+            if (state.ironX > TGT_IRON_X + 5 && state.temp < 30 && state.amount === 0) { 
+                state.ironDown = false; updateStatus("準備完了", "#e1f5fe", "#5d4037"); return; 
+            }
+            if (state.solderDown && state.amount > 0) {
+                state.isStuck = true; 
+            } else if (state.amount > 0 && Date.now() - state.lastFeed < SMOKE_DURATION && state.temp > MELTING_POINT) {
+                state.hasVoid = true; 
+            }
+            finishSim(); 
+        }
+        state.ironDown = false; 
+    };
+
     const startSolder = (e) => { if(e) e.preventDefault(); if(!state.finished && state.ironDown && !state.isOutOfSolder) { state.solderDown = true; if (state.temp < WETTING_TEMP) state.earlyFeed = true; } };
     const stopSolder = (e) => { if(e) e.preventDefault(); if(state.solderDown) state.lastFeed = Date.now(); state.solderDown = false; if (state.ironDown && !state.finished && state.ironX <= TGT_IRON_X + 5) updateStatus("なじませ中", "#c8e6c9", "#5d4037"); };
 
@@ -110,18 +129,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function calcScore() {
         let tScore = 0, sScore = 0, pScore = 30; 
         let tMsg = "", sMsg = "", pMsg = "正しい手順";
+        
+        // --- 温度の評価文言を修正 ---
         if (state.temp < MELTING_POINT) { tScore = 0; tMsg = "加熱不足"; }
         else if (state.temp < IDEAL_TEMP_MIN) { tScore = 15; tMsg = "温度低め"; }
         else if (state.temp <= IDEAL_TEMP_MAX) { tScore = 30; tMsg = "適温！"; }
-        else if (state.temp <= OVERHEAT_LIMIT) { tScore = 15; tMsg = "ｱﾂｽｷﾞ!"; }
+        else if (state.temp <= OVERHEAT_LIMIT) { tScore = 15; tMsg = "温度高め"; } // ここを修正しました
         else { tScore = 5; tMsg = "オーバーヒート"; }
+
         if (state.isStuck) { pScore = 0; pMsg = "先こて離し(固着)"; sScore = 0; } 
         else if (state.earlyFeed) { pScore = 10; pMsg = "早すぎ供給"; }
         else if (state.isOutOfSolder) { pScore = 15; pMsg = "はんだ過多"; }
+        else if (state.hasVoid) { pScore = 10; pMsg = "こて離し早すぎ(ボイド)"; } 
 
         if (!state.isStuck) {
             if (state.isBall) { sScore = 0; sMsg = "ボール(修復不可)"; }
-            else if (state.amount < 15) { sScore = 0; sMsg = "はんだ不足"; }
+            else if (state.amount < 36) { sScore = 0; sMsg = "❌ はんだ不足（リード線未被覆）"; }
             else if (state.flow < PAD_EXPOSED_LENGTH * 0.95) { sScore = 0; sMsg = `❌ なじみ不足（ランド未被覆）`; }
             else if (state.amount > 65) { sScore = 0; sMsg = `❌ 供給過多（ボール化）`; } 
             else if (state.amount > 55) { sScore = 15; sMsg = `⚠️ 供給過多（膨らみ気味）`; }
@@ -196,7 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         let timeSinceFeed = Date.now() - state.lastFeed;
-        if (state.temp > 90 && (state.solderDown || (!state.solderDown && timeSinceFeed < 1000 && state.amount > 0)) && !state.isBall && !state.finished && !state.isOutOfSolder) { if (Math.random() < 0.2) particles.push(new Particle(TGT_WIRE_X, TGT_WIRE_Y)); }
+        let isSmoking = state.temp > 90 && (state.solderDown || (!state.solderDown && timeSinceFeed < SMOKE_DURATION && state.amount > 0)) && !state.isBall && !state.finished && !state.isOutOfSolder;
+        if (isSmoking && Math.random() < 0.2) {
+            particles.push(new Particle(TGT_WIRE_X, TGT_WIRE_Y)); 
+        }
         particles.forEach((p, i) => { p.update(); if(p.opacity <= 0) particles.splice(i, 1); });
 
         // --- 描画処理 ---
@@ -204,29 +230,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isMobilePortrait = window.innerWidth <= 600 && window.innerHeight > window.innerWidth;
 
-        // ① メータ描画（スマホ時は1.4倍に拡大）
         ctx.save();
         if (isMobilePortrait) {
-            const meterScale = 1.4;
-            const mCX = canvas.width / 2;
-            const mCY = 130;
-            ctx.translate(mCX, mCY);
-            ctx.scale(meterScale, meterScale);
-            ctx.translate(-mCX, -mCY);
+            const meterScale = 1.4; const mCX = canvas.width / 2; const mCY = 130;
+            ctx.translate(mCX, mCY); ctx.scale(meterScale, meterScale); ctx.translate(-mCX, -mCY);
         }
         drawVUMeter();
         ctx.restore();
 
-        // ② 作業エリア描画（スマホ時は1.8倍に拡大）
         ctx.save();
         if (isMobilePortrait) {
-            const mobileScale = 1.8;
-            const targetX = canvas.width / 2;
-            const targetY = canvas.height - 45;
-            const translateX = targetX - (LEAD_X * mobileScale); 
-            const translateY = targetY - (GROUND_Y * mobileScale); 
-            ctx.translate(translateX, translateY);
-            ctx.scale(mobileScale, mobileScale);
+            const mobileScale = 1.8; const targetX = canvas.width / 2; const targetY = canvas.height - 45;
+            const translateX = targetX - (LEAD_X * mobileScale); const translateY = targetY - (GROUND_Y * mobileScale); 
+            ctx.translate(translateX, translateY); ctx.scale(mobileScale, mobileScale);
         }
 
         ctx.beginPath(); ctx.rect(LEAD_X - LEAD_WIDTH/2, GROUND_Y - LEAD_HEIGHT, LEAD_WIDTH, 150); drawWithOutline("#cfd8dc");
